@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,61 +9,89 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Dimensions,
+  Alert,
 } from "react-native";
 import LottieView from "lottie-react-native";
 import { useNavigation } from "@react-navigation/native";
 import ProgressBar from "../components/ProgressBar";
 
+// Replace with the actual userId and quizId
+const userId = "66e487bec13be6a254ec27ff";
+const quizId = "66ee8090bb069dfecfc660f0";
+const category = "Backend";
+
 const QuizScreen = () => {
   const navigation = useNavigation();
 
-  // Dummy data
-  const dummyQuizData = {
-    questions: [
-      {
-        _id: "1",
-        question: "What is JSON?",
-        category: "Backend",
-        answers: ["JavaScript Object Notation"],
-      },
-      {
-        _id: "2",
-        question: "What is Django?",
-        category: "Backend",
-        answers: ["Python framework"],
-      },
-      {
-        _id: "3",
-        question: "What is Java?",
-        category: "Backend",
-        answers: ["Programming language"],
-      },
-    ],
-  };
-
-  const [quizData, setQuizData] = useState(dummyQuizData.questions);
+  const [quizData, setQuizData] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [correctCount, setCorrectCount] = useState(0);
   const [showCorrectAnimation, setShowCorrectAnimation] = useState(false);
   const [showWrongModal, setShowWrongModal] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState(0);
 
-  const handleSubmitAnswer = () => {
-    const currentQuestion = quizData[currentQuestionIndex];
-    const isCorrect = currentQuestion.answers.includes(userAnswer);
+  // Fetch quiz questions when the component loads
+  useEffect(() => {
+    fetchQuizQuestion();
+  }, []);
 
-    if (isCorrect) {
-      setCorrectCount(correctCount + 1);
-      setShowCorrectAnimation(true);
+  const fetchQuizQuestion = async () => {
+    try {
+      const response = await fetch(
+        `https://flashcard-klqk.onrender.com/api/user/quiz-question/${userId}/${category}`
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setQuizData(data.questions); // Set the fetched questions
+        setTotalQuestions(data.totalQuestions);
+      } else {
+        Alert.alert("Error", data.message || "Failed to fetch questions");
+      }
+    } catch (error) {
+      Alert.alert("Error", "An error occurred while fetching the quiz.");
+    }
+  };
 
-      setTimeout(() => {
-        setShowCorrectAnimation(false);
-        if (currentQuestionIndex < quizData.length - 1) {
-          setCurrentQuestionIndex(currentQuestionIndex + 1);
+  const handleSubmitAnswer = async () => {
+    const currentQuestion = quizData[currentQuestionIndex].questionText;
+    try {
+      const response = await fetch(
+        `https://flashcard-klqk.onrender.com/api/user/quiz-answer/${userId}/${quizId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userAnswer }),
         }
-      }, 2000);
-    } else {
-      setShowWrongModal(true);
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        // Handle if the answer is correct or wrong
+        if (data.isCorrect) {
+          setCorrectCount(correctCount + 1);
+          setShowCorrectAnimation(true);
+
+          setTimeout(() => {
+            setShowCorrectAnimation(false);
+            if (currentQuestionIndex < quizData.length - 1) {
+              setCurrentQuestionIndex(currentQuestionIndex + 1);
+            }
+          }, 2000);
+        } else {
+          setShowWrongModal(true);
+        }
+
+        // Update progress
+        setProgress(data.progress);
+      } else {
+        Alert.alert("Error", data.message || "Failed to submit answer");
+      }
+    } catch (error) {
+      Alert.alert("Error", "An error occurred while submitting the answer.");
     }
 
     setUserAnswer("");
@@ -73,8 +101,6 @@ const QuizScreen = () => {
     setShowWrongModal(false);
     navigation.navigate("Home");
   };
-
-  const progress = ((currentQuestionIndex / quizData.length) * 100).toFixed(2);
 
   return (
     <KeyboardAvoidingView style={styles.container}>
@@ -88,7 +114,7 @@ const QuizScreen = () => {
           >
             <View style={styles.lottieModalContainer}>
               <LottieView
-                source={require("../../correct.json")}
+                source={require("../../util/correct.json")}
                 autoPlay
                 loop={false}
                 style={styles.lottieAnimation}
@@ -106,7 +132,7 @@ const QuizScreen = () => {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <LottieView
-                source={require("../../wrong.json")}
+                source={require("../../util/wrong.json")}
                 autoPlay
                 loop={false}
                 style={styles.lottieModalAnimation}
@@ -125,14 +151,14 @@ const QuizScreen = () => {
         </Modal>
 
         {/* Question Section */}
-        <View style={styles.questionContainer}>
-          <Text style={styles.categoryText}>
-            {quizData[currentQuestionIndex].category}
-          </Text>
-          <Text style={styles.questionText}>
-            {quizData[currentQuestionIndex].question}
-          </Text>
-        </View>
+        {quizData.length > 0 && (
+          <View style={styles.questionContainer}>
+            <Text style={styles.categoryText}>{category}</Text>
+            <Text style={styles.questionText}>
+              {quizData[currentQuestionIndex].questionText}
+            </Text>
+          </View>
+        )}
 
         {/* Answer Input */}
         <TextInput
@@ -155,7 +181,7 @@ const QuizScreen = () => {
 
         {/* Correct Count */}
         <Text style={styles.correctCountText}>
-          Correct: {correctCount}/{quizData.length}
+          Correct: {correctCount}/{totalQuestions}
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
