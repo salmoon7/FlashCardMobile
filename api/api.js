@@ -3,7 +3,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const api = axios.create({
-  baseURL: "https://flashcard-klqk.onrender.com/api/user", // Replace with your backend URL
+  baseURL: "https://flashcard-klqk.onrender.com/api/user",
 });
 
 api.interceptors.request.use(
@@ -21,7 +21,5 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-
-
 
 export default api;

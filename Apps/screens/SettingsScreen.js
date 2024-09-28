@@ -20,20 +20,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BarChart } from "react-native-chart-kit";
 
 const SettingsScreen = ({ navigation }) => {
-  const { user, setUser, updateProfileImage } = useContext(UserContext);
+  const { user, setUser, updateProfileImage, chartData } =
+    useContext(UserContext);
   const { isDarkTheme, toggleTheme } = useContext(ThemeContext);
 
   const [profileImage, setProfileImage] = useState(user.profileImage || null);
   const [name, setName] = useState(user.name || "John Doe");
   const [email, setEmail] = useState(user.email || "example@example.com");
   const [bio, setBio] = useState(user.bio || "Add a short bio...");
-
   const [loading, setLoading] = useState(false); // Loading state for logout
-
-  const [totalFlashcards, setTotalFlashcards] = useState(25);
-  const [categoriesCreated, setCategoriesCreated] = useState(5);
-  const [quizzesTaken, setQuizzesTaken] = useState(10);
-  const [masteryProgress, setMasteryProgress] = useState(80);
 
   useEffect(() => {
     const loadThemePreference = async () => {
@@ -101,15 +96,6 @@ const SettingsScreen = ({ navigation }) => {
     } finally {
       setLoading(false); // Stop loading indicator
     }
-  };
-
-  const chartData = {
-    labels: ["Flashcards", "Quizzes", "Categories"],
-    datasets: [
-      {
-        data: [totalFlashcards, quizzesTaken, categoriesCreated],
-      },
-    ],
   };
 
   return (
@@ -227,7 +213,18 @@ const SettingsScreen = ({ navigation }) => {
           </Text>
 
           <BarChart
-            data={chartData}
+            data={{
+              labels: ["Flashcards", "Quizzes", "Categories"],
+              datasets: [
+                {
+                  data: [
+                    chartData.totalFlashcards,
+                    chartData.quizzesTaken,
+                    chartData.categoriesCreated,
+                  ],
+                },
+              ],
+            }}
             width={Dimensions.get("window").width - 60}
             height={220}
             yAxisLabel=""
@@ -276,12 +273,24 @@ const SettingsScreen = ({ navigation }) => {
             alignItems: "center",
             flexDirection: "row",
             justifyContent: "center",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 5,
           }}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" /> // Show spinner if loading
+            <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={{ color: "#fff", fontSize: 18 }}>Log Out</Text>
+            <Text
+              style={{
+                color: "#fff",
+                fontWeight: "bold",
+                fontSize: 16,
+              }}
+            >
+              Log Out
+            </Text>
           )}
         </TouchableOpacity>
       </ScrollView>

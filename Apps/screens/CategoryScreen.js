@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UserContext } from "../../api/ContextApi";
@@ -27,9 +28,14 @@ const CategoryScreen = ({ navigation }) => {
         `https://flashcard-klqk.onrender.com/api/user/categories/${user.id}`
       );
       const data = await response.json();
+
+      console.log("Fetched data:", data); // Log the fetched data to inspect
+
       if (response.ok) {
         await Promise.all(
           data.categories.map(async (category) => {
+            console.log("Category data:", category); // Log each category's data
+
             const savedProgress = await AsyncStorage.getItem(
               `quiz-progress-${category.categoryName}`
             );
@@ -39,21 +45,31 @@ const CategoryScreen = ({ navigation }) => {
             }
           })
         );
+
         setCategories(data.categories);
 
+        // Corrected to use questions.length instead of flashcard.length
         const totalFlashcardsCount = data.categories.reduce(
-          (acc, category) => acc + category.flashcard.length,
+          (acc, category) =>
+            acc + (category.questions ? category.questions.length : 0),
           0
         );
+
+        // Use answeredQuestions to calculate quizzes taken
         const quizzesTaken = data.categories.reduce(
-          (acc, category) => acc + (category.quizzesTaken || 0),
+          (acc, category) => acc + (category.answeredQuestions || 0),
           0
         );
+
+        console.log("Final categories data:", data.categories);
+        console.log("Total flashcards:", totalFlashcardsCount);
+        console.log("Quizzes taken:", quizzesTaken);
+        console.log("Categories created:", data.categories.length);
 
         setChartData({
           totalFlashcards: totalFlashcardsCount,
           quizzesTaken: quizzesTaken,
-          categoriesCreated: data,
+          categoriesCreated: data.categories.length,
         });
       } else {
         Alert.alert("Error", data.message || "Failed to load categories");

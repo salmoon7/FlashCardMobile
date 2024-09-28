@@ -11,14 +11,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import ProgressBar from "../components/ProgressBar";
 import { Menu, Divider } from "react-native-paper";
-import { UserContext } from "../../api/ContextApi";
+import { UserContext } from "../../api/ContextApi"; // Import the UserContext
 import LottieView from "lottie-react-native";
 
 const { width } = Dimensions.get("window");
 
 const HomeScreen = ({ route, navigation }) => {
   const { name } = route.params || { name: "User" };
-  const { user, profileImage } = useContext(UserContext);
+  const { user, profileImage, chartData, setChartData } =
+    useContext(UserContext); // Get chartData from UserContext
   const userId = user.id;
 
   const [categories, setCategories] = useState([]);
@@ -32,8 +33,18 @@ const HomeScreen = ({ route, navigation }) => {
           `https://flashcard-klqk.onrender.com/api/user/categories/${userId}`
         );
         const data = await response.json();
+
+        // Store categories and progress into state
         setCategories(data.categories);
         setLoading(false);
+
+        // Optionally, update chartData based on backend if needed
+        setChartData((prevData) => ({
+          ...prevData,
+          totalFlashcards: data.categories.length,
+          quizzesTaken: 0, // Update this based on your logic
+          categoriesCreated: data.categories.length,
+        }));
       } catch (error) {
         console.error("Error fetching categories:", error);
         setLoading(false);
@@ -41,7 +52,7 @@ const HomeScreen = ({ route, navigation }) => {
     };
 
     fetchCategories();
-  }, [userId]);
+  }, [userId, setChartData]);
 
   const openMenu = (index) => {
     setVisibleMenus((prevState) => ({
@@ -179,11 +190,18 @@ const HomeScreen = ({ route, navigation }) => {
                   </Menu>
                 </View>
 
+                {/* Display the correct progress */}
                 <ProgressBar
-                  progress={parseFloat(category.progress)}
+                  progress={
+                    category.savedProgress || parseFloat(category.progress)
+                  }
                   color="#6200ee"
                 />
-                <Text>{category.progress}</Text>
+                <Text>
+                  {category.savedProgress
+                    ? `${category.savedProgress.toFixed(2)}%`
+                    : `${category.progress}%`}
+                </Text>
               </TouchableOpacity>
             ))
           ) : (
@@ -238,42 +256,41 @@ const styles = StyleSheet.create({
     width: "40%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 4,
   },
   cardText: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: 5,
+    fontWeight: "bold",
     color: "#480ca8",
   },
   progressCard: {
-    backgroundColor: "white",
-    padding: 20,
-    borderRadius: 10,
+    padding: 16,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    marginBottom: 8,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowRadius: 3,
     elevation: 4,
   },
   categoryTitle: {
-    fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 10,
+    fontSize: 16,
   },
   emptyContainer: {
-    justifyContent: "center",
     alignItems: "center",
-    marginTop: 20,
-  },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 18,
-    color: "#480ca8",
+    justifyContent: "center",
+    height: 200,
   },
   lottieAnimation: {
-    width: 200,
-    height: 200,
+    width: 150,
+    height: 150,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: "#555",
   },
 });

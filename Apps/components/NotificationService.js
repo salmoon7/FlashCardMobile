@@ -12,7 +12,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Function to register for push notifications
 export async function registerForPushNotificationsAsync() {
   let token;
 
