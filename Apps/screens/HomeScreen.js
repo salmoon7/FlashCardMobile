@@ -10,8 +10,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ProgressBar from "../components/ProgressBar";
-import { Menu, Button, Divider } from "react-native-paper";
+import { Menu, Divider } from "react-native-paper";
 import { UserContext } from "../../api/ContextApi";
+import LottieView from "lottie-react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -119,7 +120,7 @@ const HomeScreen = ({ route, navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.card}
-            onPress={() => navigation.navigate("My Flashcards")}
+            onPress={() => navigation.navigate("Flashcards")}
           >
             <Ionicons name="list-circle-outline" size={32} color="#480ca8" />
             <Text style={styles.cardText}>My Flashcards</Text>
@@ -186,7 +187,15 @@ const HomeScreen = ({ route, navigation }) => {
               </TouchableOpacity>
             ))
           ) : (
-            <Text>No categories available</Text>
+            <View style={styles.emptyContainer}>
+              <LottieView
+                source={require("../../util/create.json")}
+                autoPlay
+                loop
+                style={styles.lottieAnimation}
+              />
+              <Text style={styles.emptyText}>No flashcard yet</Text>
+            </View>
           )}
         </ScrollView>
       </View>
@@ -252,5 +261,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 10,
+  },
+  emptyContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 18,
+    color: "#480ca8",
+  },
+  lottieAnimation: {
+    width: 200,
+    height: 200,
   },
 });

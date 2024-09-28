@@ -3,288 +3,263 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Dimensions,
+  Button,
   Alert,
+  Modal,
+  ActivityIndicator,
+  TouchableOpacity,
+  StyleSheet,
 } from "react-native";
+import { ProgressBar } from "react-native-paper";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import LottieView from "lottie-react-native";
-import { useNavigation } from "@react-navigation/native";
-import ProgressBar from "../components/ProgressBar";
 
-// Replace with the actual userId and quizId
-const userId = "66e487bec13be6a254ec27ff";
-const quizId = "66ee8090bb069dfecfc660f0";
-const category = "Backend";
+import correctAnimation from "../../util/correct.json";
+import wrongAnimation from "../../util/wrong.json";
 
-const QuizScreen = () => {
-  const navigation = useNavigation();
-
-  const [quizData, setQuizData] = useState([]);
+const QuizScreen = ({ route, navigation }) => {
+  const { category } = route.params;
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswer, setUserAnswer] = useState("");
-  const [correctCount, setCorrectCount] = useState(0);
-  const [showCorrectAnimation, setShowCorrectAnimation] = useState(false);
-  const [showWrongModal, setShowWrongModal] = useState(false);
+  const [correctAnswers, setCorrectAnswers] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [answer, setAnswer] = useState("");
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showCorrectModal, setShowCorrectModal] = useState(false);
+  const [showWrongModal, setShowWrongModal] = useState(false);
 
-  // Fetch quiz questions when the component loads
+  const questions = category.questions || [];
+  const currentQuestion = questions[currentQuestionIndex];
+
   useEffect(() => {
-    fetchQuizQuestion();
+    loadQuizProgress();
   }, []);
 
-  const fetchQuizQuestion = async () => {
+  const loadQuizProgress = async () => {
     try {
-      const response = await fetch(
-        `https://flashcard-klqk.onrender.com/api/user/quiz-question/${userId}/${category}`
+      const savedProgress = await AsyncStorage.getItem(
+        `quiz-progress-${category.categoryName}`
       );
-      const data = await response.json();
-      if (response.ok) {
-        setQuizData(data.questions); // Set the fetched questions
-        setTotalQuestions(data.totalQuestions);
-      } else {
-        Alert.alert("Error", data.message || "Failed to fetch questions");
+      if (savedProgress !== null) {
+        const { currentQuestionIndex, correctAnswers, progress } =
+          JSON.parse(savedProgress);
+        setCurrentQuestionIndex(currentQuestionIndex);
+        setCorrectAnswers(correctAnswers);
+        setProgress(progress);
       }
     } catch (error) {
-      Alert.alert("Error", "An error occurred while fetching the quiz.");
+      console.error("Error loading quiz progress", error);
     }
   };
 
-  const handleSubmitAnswer = async () => {
-    const currentQuestion = quizData[currentQuestionIndex].questionText;
+  // Function to save quiz progress to AsyncStorage
+  const saveQuizProgress = async () => {
     try {
-      const response = await fetch(
-        `https://flashcard-klqk.onrender.com/api/user/quiz-answer/${userId}/${quizId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ userAnswer }),
-        }
+      const progressData = {
+        currentQuestionIndex,
+        correctAnswers,
+        progress,
+      };
+      await AsyncStorage.setItem(
+        `quiz-progress-${category.categoryName}`,
+        JSON.stringify(progressData)
       );
-      const data = await response.json();
-
-      if (response.ok) {
-        // Handle if the answer is correct or wrong
-        if (data.isCorrect) {
-          setCorrectCount(correctCount + 1);
-          setShowCorrectAnimation(true);
-
-          setTimeout(() => {
-            setShowCorrectAnimation(false);
-            if (currentQuestionIndex < quizData.length - 1) {
-              setCurrentQuestionIndex(currentQuestionIndex + 1);
-            }
-          }, 2000);
-        } else {
-          setShowWrongModal(true);
-        }
-
-        // Update progress
-        setProgress(data.progress);
-      } else {
-        Alert.alert("Error", data.message || "Failed to submit answer");
-      }
     } catch (error) {
-      Alert.alert("Error", "An error occurred while submitting the answer.");
+      console.error("Error saving quiz progress", error);
     }
-
-    setUserAnswer("");
   };
 
-  const handleGoBackToStudy = () => {
+  const handleAnswerSubmission = () => {
+    const userAnswer = answer.trim().toLowerCase();
+    const correctAnswer = currentQuestion.answerText.trim().toLowerCase();
+
+    if (userAnswer === correctAnswer) {
+      setCorrectAnswers(correctAnswers + 1);
+
+      const newProgress = ((correctAnswers + 1) / questions.length) * 100;
+      setProgress(newProgress);
+      setShowCorrectModal(true);
+      if (currentQuestionIndex + 1 === questions.length) {
+        setQuizCompleted(true);
+        setShowCorrectModal(false);
+      } else {
+        setTimeout(() => {
+          setShowCorrectModal(false);
+          setCurrentQuestionIndex(currentQuestionIndex + 1);
+          setAnswer("");
+          saveQuizProgress();
+        }, 1500);
+      }
+    } else {
+      setShowWrongModal(true);
+    }
+  };
+
+  const handleReviewFlashcards = () => {
     setShowWrongModal(false);
-    navigation.navigate("Home");
+    navigation.navigate("Flashcards");
+  };
+
+  const handleTryAgain = () => {
+    setShowWrongModal(false);
+  };
+  const handleQuizReset = async () => {
+    setCurrentQuestionIndex(0);
+    setCorrectAnswers(0);
+    setQuizCompleted(false);
+    setProgress(0);
+    await AsyncStorage.removeItem(`quiz-progress-${category.categoryName}`);
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Correct Answer Animation */}
-        {showCorrectAnimation && (
-          <Modal
-            visible={showCorrectAnimation}
-            transparent
-            animationType="slide"
+    <View style={styles.container}>
+      <Text style={styles.categoryTitle}>{category.categoryName}</Text>
+      <ProgressBar
+        progress={progress / 100}
+        color="#6200ee"
+        style={styles.progressBar}
+      />
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#6200ee" />
+      ) : quizCompleted ? (
+        <View style={styles.resultContainer}>
+          <Text style={styles.resultText}>Quiz Completed!</Text>
+          <Text style={styles.resultText}>
+            You got {correctAnswers}/{questions.length} correct.
+          </Text>
+          <Button title="Restart Quiz" onPress={handleQuizReset} />
+        </View>
+      ) : (
+        <View style={styles.quizContainer}>
+          <Text style={styles.questionText}>
+            {currentQuestion.questionText}
+          </Text>
+
+          <TextInput
+            style={styles.answerInput}
+            placeholder="Type your answer"
+            value={answer}
+            onChangeText={setAnswer}
+          />
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleAnswerSubmission}
           >
-            <View style={styles.lottieModalContainer}>
-              <LottieView
-                source={require("../../util/correct.json")}
-                autoPlay
-                loop={false}
-                style={styles.lottieAnimation}
-              />
-            </View>
-          </Modal>
-        )}
+            <Text style={styles.buttonText}>Submit Answer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {/* Correct Answer Modal */}
+      <Modal visible={showCorrectModal} transparent={true} animationType="fade">
+        <View style={styles.modalContainer}>
+          <LottieView
+            source={correctAnimation}
+            autoPlay
+            loop={false}
+            style={styles.lottie}
+          />
+          <Text style={styles.modalText}>Correct!</Text>
+        </View>
+      </Modal>
 
-        {/* Wrong Answer Modal */}
-        <Modal
-          visible={showWrongModal}
-          transparent={true}
-          animationType="slide"
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <LottieView
-                source={require("../../util/wrong.json")}
-                autoPlay
-                loop={false}
-                style={styles.lottieModalAnimation}
-              />
-              <Text style={styles.modalText}>
-                Incorrect! Go back to flashcards to study more.
-              </Text>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={handleGoBackToStudy}
-              >
-                <Text style={styles.modalButtonText}>Go Back to Study</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+      {/* Wrong Answer Modal */}
+      <Modal visible={showWrongModal} transparent={true} animationType="fade">
+        <View style={styles.modalContainer}>
+          <LottieView
+            source={wrongAnimation}
+            autoPlay
+            loop={false}
+            style={styles.lottie}
+          />
+          <Text style={styles.modalText}>Oops! You made a mistake.</Text>
 
-        {/* Question Section */}
-        {quizData.length > 0 && (
-          <View style={styles.questionContainer}>
-            <Text style={styles.categoryText}>{category}</Text>
-            <Text style={styles.questionText}>
-              {quizData[currentQuestionIndex].questionText}
-            </Text>
-          </View>
-        )}
-
-        {/* Answer Input */}
-        <TextInput
-          style={styles.input}
-          placeholder="Type your answer..."
-          value={userAnswer}
-          onChangeText={setUserAnswer}
-        />
-
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={styles.submitButton}
-          onPress={handleSubmitAnswer}
-        >
-          <Text style={styles.submitButtonText}>Submit Answer</Text>
-        </TouchableOpacity>
-
-        {/* Progress Bar */}
-        <ProgressBar progress={progress} />
-
-        {/* Correct Count */}
-        <Text style={styles.correctCountText}>
-          Correct: {correctCount}/{totalQuestions}
-        </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Buttons for Reviewing Flashcards or Trying Again */}
+          <Button title="Review Flashcards" onPress={handleReviewFlashcards} />
+          <Button title="Try Again" onPress={handleTryAgain} />
+        </View>
+      </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
     backgroundColor: "#f5f5f5",
   },
-  scrollContainer: {
-    padding: 20,
+  categoryTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  progressBar: {
+    height: 10,
+    marginVertical: 20,
+  },
+  quizContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  questionContainer: {
+  button: {
     backgroundColor: "#480ca8",
-    padding: 20,
-    borderRadius: 15,
-    marginBottom: 30,
-    width: Dimensions.get("window").width - 40,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  categoryText: {
+  buttonText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
+    fontWeight: "600",
+    textAlign: "center",
   },
   questionText: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: 20,
+    marginBottom: 20,
+    textAlign: "center",
   },
-  input: {
-    width: Dimensions.get("window").width - 40,
-    padding: 15,
+  answerInput: {
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 8,
-    backgroundColor: "#fff",
-    marginBottom: 20,
-  },
-  submitButton: {
-    backgroundColor: "#5a67d8",
     padding: 15,
+    width: "80%",
+    marginBottom: 20,
     borderRadius: 10,
-    width: Dimensions.get("window").width - 40,
+    backgroundColor: "#fff",
+  },
+  resultContainer: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
   },
-  submitButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  correctCountText: {
-    fontSize: 18,
-    color: "#333",
-    marginTop: 20,
-  },
-  lottieAnimation: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
+  resultText: {
+    fontSize: 20,
+    marginVertical: 10,
   },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.7)", // Slightly transparent background
   },
-  modalContent: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  lottieModalAnimation: {
-    width: 200,
-    height: 200,
-    marginBottom: 20,
+  lottie: {
+    width: 150,
+    height: 150,
   },
   modalText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  modalButton: {
-    backgroundColor: "#5a67d8",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  modalButtonText: {
     color: "#fff",
-    fontSize: 16,
-  },
-  lottieModalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
+    marginTop: 20,
   },
 });
 

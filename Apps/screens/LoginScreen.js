@@ -1,5 +1,6 @@
 import React, { useState, useRef, useContext } from "react";
 import { UserContext } from "../../api/ContextApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -9,6 +10,8 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  ActivityIndicator,
+  Modal,
 } from "react-native";
 import LottieView from "lottie-react-native";
 
@@ -40,25 +43,27 @@ const LoginScreen = ({ navigation }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Check if `user` and `user.name` exist
         if (data.user && data.user.name) {
           setUser(data.user);
           const { name } = data.user;
           console.log("Username:", name);
+          await AsyncStorage.setItem("userToken", data.user.token);
+          // Reset email and password
+          setEmail("");
+          setPassword("");
           setLoading(false);
 
           navigation.navigate("HomeTabs", { screen: "Home", params: { name } });
         } else {
-          console.error("User object or name property is missing.");
           Alert.alert("Login Failed", "User data is missing.");
           setLoading(false);
         }
       } else {
         Alert.alert("Login Failed", data.message);
+        setLoading(false);
       }
     } catch (error) {
       console.error("Login error", error);
-
       Alert.alert("Error", "An error occurred during login.");
       setLoading(false);
     }
@@ -80,9 +85,9 @@ const LoginScreen = ({ navigation }) => {
         placeholderTextColor="#aaa"
         keyboardType="email-address"
         autoCapitalize="none"
-        className="border-b-2 border-primary p-2 w-full"
         onChangeText={setEmail}
         value={email}
+        className="border-b-2 border-primary p-2 w-full"
       />
 
       <TextInput
@@ -90,8 +95,8 @@ const LoginScreen = ({ navigation }) => {
         placeholder="Password"
         placeholderTextColor="#aaa"
         secureTextEntry
-        className="border-b-2 border-primary p-2 w-full"
         onChangeText={setPassword}
+        className="border-b-2 border-primary p-2 w-full"
         value={password}
       />
 
@@ -118,15 +123,7 @@ const LoginScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {loading && (
-        <LottieView
-          ref={animation}
-          source={require("../../assets/loading.json")}
-          autoPlay
-          loop
-          style={styles.lottie}
-        />
-      )}
+      {loading && <ActivityIndicator size="large" color="#480ca8" />}
     </KeyboardAvoidingView>
   );
 };
@@ -196,7 +193,21 @@ const styles = StyleSheet.create({
   lottie: {
     width: 150,
     height: 150,
-    alignSelf: "center",
+  },
+  // Modal styles
+  modalBackground: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    width: 200,
+    height: 200,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
   },
 });
 

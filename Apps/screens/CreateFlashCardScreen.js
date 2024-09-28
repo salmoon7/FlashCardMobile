@@ -5,31 +5,33 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
+  Modal,
   Platform,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from "react-native";
+import LottieView from "lottie-react-native";
 import { UserContext } from "../../api/ContextApi";
+import { TextInput as TextField } from "react-native-paper";
 
 const CreateFlashcardScreen = ({ navigation }) => {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [category, setCategory] = useState("");
-
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const { user } = useContext(UserContext);
 
   const handleCreateFlashcard = async () => {
     if (!question || !answer || !category) {
-      Alert.alert("Error", "Please enter all required fields.");
       return;
     }
 
     setLoading(true);
-
     try {
       const response = await fetch(
-        "https://flashcard-klqk.onrender.com/api/user/createflashcard",
+        `https://flashcard-klqk.onrender.com/api/user/createflashcard/${user.id}`,
         {
           method: "POST",
           headers: {
@@ -39,31 +41,31 @@ const CreateFlashcardScreen = ({ navigation }) => {
             questionText: question,
             answerText: answer,
             category,
-            userId: user.id,
           }),
         }
       );
 
       const data = await response.json();
-      console.log("Full response", data);
 
       if (response.ok) {
-        Alert.alert("Success", "Flashcard created successfully!");
+        setSuccess(true);
+        setModalVisible(true);
+        setTimeout(() => {
+          setModalVisible(false);
+          setCategory("");
+          setAnswer("");
+          setQuestion("");
+          setSuccess(false);
 
-        setCategory("");
-        setAnswer("");
-        setQuestion("");
-
-        navigation.navigate("HomeTabs", {
-          screen: "MyFlashcards",
-          params: { newFlashcard: data.question },
-        });
-      } else {
-        Alert.alert("Creation Failed", data.message);
+          // Navigate back to home and pass the new category
+          navigation.navigate("HomeTabs", {
+            screen: "MyFlashcards",
+            params: { newCategory: category },
+          });
+        }, 2000);
       }
     } catch (error) {
       console.error("Creation error", error);
-      Alert.alert("Error", "An error occurred while creating the flashcard.");
     } finally {
       setLoading(false);
     }
@@ -79,39 +81,67 @@ const CreateFlashcardScreen = ({ navigation }) => {
         Add new questions and answers to your collection.
       </Text>
 
-      <TextInput
-        value={category}
-        onChangeText={setCategory}
-        placeholderTextColor="#aaa"
-        style={styles.input}
-        placeholder="Enter Category"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Question"
-        placeholderTextColor="#aaa"
-        onChangeText={setQuestion}
-        value={question}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Answer"
-        placeholderTextColor="#aaa"
-        onChangeText={setAnswer}
-        value={answer}
-      />
-
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleCreateFlashcard}
-        disabled={loading}
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
       >
-        <Text style={styles.buttonText}>
-          {loading ? "Creating..." : "Create Flashcard"}
-        </Text>
-      </TouchableOpacity>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <LottieView
+              source={require("../../util/done.json")}
+              autoPlay
+              loop={false}
+              style={styles.lottie}
+            />
+            <Text style={styles.successText}>
+              Flashcard Created Successfully!
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {!modalVisible && (
+        <>
+          <TextInput
+            value={category}
+            onChangeText={setCategory}
+            placeholderTextColor="#aaa"
+            style={styles.input}
+            placeholder="Enter Category"
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Question"
+            placeholderTextColor="#aaa"
+            onChangeText={setQuestion}
+            value={question}
+          />
+
+          <TextField
+            mode="outlined"
+            label="Answer"
+            placeholder="Type your answer"
+            value={answer}
+            onChangeText={setAnswer}
+            style={styles.input}
+          />
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleCreateFlashcard}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Create Flashcard</Text>
+            )}
+          </TouchableOpacity>
+        </>
+      )}
     </KeyboardAvoidingView>
   );
 };
@@ -164,6 +194,30 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  lottie: {
+    width: 200,
+    height: 200,
+    alignSelf: "center",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    padding: 20,
+    marginHorizontal: 40,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  successText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2c3e50",
+    marginTop: 10,
+    textAlign: "center",
   },
 });
 

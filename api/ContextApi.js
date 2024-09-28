@@ -1,26 +1,31 @@
 import React, { createContext, useState } from "react";
 
-// Create the context
 export const UserContext = createContext();
 
 // Create a provider component
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState({
-    id: "1", // Example user ID
+    id: "1",
     name: "User",
-    profileImage: null, // Initially no profile image
+    profileImage: null,
+  });
+  const [chartData, setChartData] = useState({
+    totalFlashcards: 0,
+    quizzesTaken: 0,
+    categoriesCreated: 0,
   });
 
-  // Function to update profile image
   const updateProfileImage = (imageUri) => {
     setUser((prevState) => ({
       ...prevState,
-      profileImage: imageUri, // Update only the profileImage
+      profileImage: imageUri,
     }));
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser, updateProfileImage }}>
+    <UserContext.Provider
+      value={{ user, setUser, updateProfileImage, chartData, setChartData }}
+    >
       {children}
     </UserContext.Provider>
   );

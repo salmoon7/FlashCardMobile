@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { UserContext } from "../../api/ContextApi";
 import { ThemeContext } from "../../api/ThemeContext";
@@ -26,6 +27,8 @@ const SettingsScreen = ({ navigation }) => {
   const [name, setName] = useState(user.name || "John Doe");
   const [email, setEmail] = useState(user.email || "example@example.com");
   const [bio, setBio] = useState(user.bio || "Add a short bio...");
+
+  const [loading, setLoading] = useState(false); // Loading state for logout
 
   const [totalFlashcards, setTotalFlashcards] = useState(25);
   const [categoriesCreated, setCategoriesCreated] = useState(5);
@@ -64,10 +67,40 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   const handleLogout = async () => {
-    setUser(null);
-    await AsyncStorage.removeItem("profileImage");
-    await AsyncStorage.removeItem("themePreference");
-    navigation.navigate("Login");
+    setLoading(true); // Start loading indicator
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+
+      if (token) {
+        const response = await fetch(
+          "https://flashcard-klqk.onrender.com/api/user/logout",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          Alert.alert("Success", result.message);
+          await AsyncStorage.removeItem("userToken");
+          navigation.navigate("Login");
+        } else {
+          Alert.alert("Error", "Failed to log out");
+        }
+      } else {
+        Alert.alert("Error", "No token found");
+      }
+    } catch (error) {
+      console.error("Error logging out:", error);
+      Alert.alert("Error", "An error occurred while logging out");
+    } finally {
+      setLoading(false); // Stop loading indicator
+    }
   };
 
   const chartData = {
@@ -85,7 +118,7 @@ const SettingsScreen = ({ navigation }) => {
     >
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         {/* Profile Section */}
-        <View style={{ alignItems: "center", marginBottom: 20 }}>
+        <View style={{ alignItems: "center", marginBottom: 30 }}>
           <TouchableOpacity
             onPress={handlePickImage}
             style={{ position: "relative" }}
@@ -94,25 +127,27 @@ const SettingsScreen = ({ navigation }) => {
               <Image
                 source={{ uri: profileImage }}
                 style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 50,
+                  width: 120,
+                  height: 120,
+                  borderRadius: 60,
                   marginBottom: 15,
+                  borderWidth: 2,
+                  borderColor: isDarkTheme ? "#fff" : "#333",
                 }}
               />
             ) : (
               <View
                 style={{
-                  width: 100,
-                  height: 100,
+                  width: 120,
+                  height: 120,
                   backgroundColor: isDarkTheme ? "#333" : "#ccc",
-                  borderRadius: 50,
+                  borderRadius: 60,
                   justifyContent: "center",
                   alignItems: "center",
                 }}
               >
                 <Text
-                  style={{ fontSize: 36, color: isDarkTheme ? "#fff" : "#000" }}
+                  style={{ fontSize: 40, color: isDarkTheme ? "#fff" : "#000" }}
                 >
                   {name[0]}
                 </Text>
@@ -120,7 +155,7 @@ const SettingsScreen = ({ navigation }) => {
             )}
             <Ionicons
               name="add-circle"
-              size={28}
+              size={30}
               color="#480ca8"
               style={{ position: "absolute", bottom: 0, right: -10 }}
             />
@@ -129,11 +164,11 @@ const SettingsScreen = ({ navigation }) => {
           <TextInput
             style={{
               textAlign: "center",
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: "bold",
               color: isDarkTheme ? "#fff" : "#000",
-              marginBottom: 8,
-              padding: 8,
+              marginBottom: 10,
+              padding: 10,
               borderBottomWidth: 1,
               borderBottomColor: isDarkTheme ? "#555" : "#ccc",
             }}
@@ -145,10 +180,10 @@ const SettingsScreen = ({ navigation }) => {
           <TextInput
             style={{
               textAlign: "center",
-              fontSize: 14,
+              fontSize: 16,
               color: isDarkTheme ? "#ccc" : "#555",
-              marginBottom: 15,
-              padding: 8,
+              marginBottom: 10,
+              padding: 10,
               borderBottomWidth: 1,
               borderBottomColor: isDarkTheme ? "#555" : "#ccc",
             }}
@@ -159,10 +194,10 @@ const SettingsScreen = ({ navigation }) => {
           />
           <TextInput
             style={{
-              padding: 10,
+              padding: 12,
               backgroundColor: isDarkTheme ? "#333" : "#fff",
               color: isDarkTheme ? "#fff" : "#000",
-              borderRadius: 8,
+              borderRadius: 12,
               marginBottom: 20,
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 2 },
@@ -177,17 +212,15 @@ const SettingsScreen = ({ navigation }) => {
           />
         </View>
 
-        <View style={{ marginBottom: 40, paddingHorizontal: 20 }}>
+        {/* Centered Graph */}
+        <View style={{ alignItems: "center", marginBottom: 40 }}>
           <Text
             style={{
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: "bold",
               marginBottom: 15,
               color: isDarkTheme ? "#fff" : "#333",
-              fontFamily: "Roboto-Bold", // Custom font
-              borderBottomWidth: 1,
-              borderBottomColor: isDarkTheme ? "#555" : "#ccc",
-              paddingBottom: 10,
+              fontFamily: "Roboto-Bold",
             }}
           >
             Activity & Stats
@@ -195,7 +228,7 @@ const SettingsScreen = ({ navigation }) => {
 
           <BarChart
             data={chartData}
-            width={Dimensions.get("window").width - 40}
+            width={Dimensions.get("window").width - 60}
             height={220}
             yAxisLabel=""
             chartConfig={{
@@ -215,49 +248,6 @@ const SettingsScreen = ({ navigation }) => {
               borderRadius: 16,
             }}
           />
-
-          <View style={{ marginTop: 20 }}>
-            <Text
-              style={{
-                fontSize: 18,
-                color: isDarkTheme ? "#fff" : "#333",
-                fontFamily: "Roboto-Regular",
-                marginBottom: 8,
-              }}
-            >
-              Total Flashcards Created: {totalFlashcards}
-            </Text>
-            <Text
-              style={{
-                fontSize: 18,
-                color: isDarkTheme ? "#fff" : "#333",
-                fontFamily: "Roboto-Regular",
-                marginBottom: 8,
-              }}
-            >
-              Categories Created: {categoriesCreated}
-            </Text>
-            <Text
-              style={{
-                fontSize: 18,
-                color: isDarkTheme ? "#fff" : "#333",
-                fontFamily: "Roboto-Regular",
-                marginBottom: 8,
-              }}
-            >
-              Quizzes Taken: {quizzesTaken}
-            </Text>
-            <Text
-              style={{
-                fontSize: 18,
-                color: isDarkTheme ? "#fff" : "#333",
-                fontFamily: "Roboto-Regular",
-                marginBottom: 8,
-              }}
-            >
-              Mastery Progress: {masteryProgress}%
-            </Text>
-          </View>
         </View>
 
         {/* Dark Mode Switch */}
@@ -275,17 +265,24 @@ const SettingsScreen = ({ navigation }) => {
           <Switch value={isDarkTheme} onValueChange={toggleTheme} />
         </View>
 
-        {/* Logout Button */}
+        {/* Logout Button and Activity Indicator */}
         <TouchableOpacity
           onPress={handleLogout}
+          disabled={loading} // Disable button while loading
           style={{
-            backgroundColor: "#480ca8",
+            backgroundColor: loading ? "#ccc" : "#480ca8",
             padding: 15,
-            borderRadius: 10,
+            borderRadius: 12,
             alignItems: "center",
+            flexDirection: "row",
+            justifyContent: "center",
           }}
         >
-          <Text style={{ color: "#fff", fontSize: 18 }}>Logout</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" /> // Show spinner if loading
+          ) : (
+            <Text style={{ color: "#fff", fontSize: 18 }}>Log Out</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

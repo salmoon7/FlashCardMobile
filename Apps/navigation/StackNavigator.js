@@ -6,7 +6,9 @@ import OnBoardingScreen from "../../Apps/screens/OnBoardingScreen";
 import LoginScreen from "../Apps/../screens/LoginScreen";
 import RegisterScreen from "../../Apps/screens/RegisterScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
+import CategoryDetailScreen from "../screens/CategoryDetailScreen";
 import TabNavigators from "./TabNavigators";
+import QuizScreen from "../screens/QuizScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -26,7 +28,9 @@ const StackNavigator = () => {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="Details" component={CategoryDetailScreen} />
       <Stack.Screen name="HomeTabs" component={TabNavigators} />
+      <Stack.Screen name="Quiz" component={QuizScreen} />
     </Stack.Navigator>
   );
 };

@@ -1,125 +1,212 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, SafeAreaView } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import Animated, {
-  interpolate,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  Extrapolation,
-} from "react-native-reanimated";
-import Cards from "../components/Cards"; // Import your Cards component
-import { SystemBars } from "react-native-bars";
+import React, { useState, useEffect, useContext } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { Menu, Divider } from "react-native-paper";
+import { UserContext } from "../../api/ContextApi";
+import { Ionicons } from "@expo/vector-icons";
 
 const FlashcardsScreen = () => {
-  const [newData, setNewData] = useState([]); // Store questions and answers here
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [activityIndex, setActivityIndex] = useState(0);
-  const animatedValue = useSharedValue(0);
-  const MAX = 3;
+  const [categories, setCategories] = useState([]);
+  const [filteredCategories, setFilteredCategories] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { user } = useContext(UserContext);
+  const navigation = useNavigation();
+  const [visibleMenus, setVisibleMenus] = useState({});
 
-  // Fetch data from API with error handling
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(
-          "https://flashcard-klqk.onrender.com/api/user/QA/66e487bec13be6a254ec27ff/Banking"
-        );
-        const data = await response.json();
-        setNewData(data.questions);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-
-        alert("Error fetching data. Please try again later.");
-      }
-    };
-
-    fetchData();
+    fetchCategories();
   }, []);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    if (animatedValue.value > currentIndex + 0.5) {
-      runOnJS(setActivityIndex)(currentIndex + 1);
-    } else {
-      runOnJS(setActivityIndex)(currentIndex);
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://flashcard-klqk.onrender.com/api/user/categories/${user.id}`
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setCategories(data.categories);
+        setFilteredCategories(data.categories);
+      } else {
+        Alert.alert("Error", data.message || "Failed to load categories");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    const opacity = interpolate(
-      animatedValue.value,
-      [currentIndex, currentIndex + 0.3, currentIndex + 0.8, currentIndex + 1],
-      [1, 0, 0, 1],
-      Extrapolation.CLAMP
-    );
+  };
 
-    return {
-      opacity: opacity,
-    };
-  });
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    if (query) {
+      const filtered = categories.filter((category) =>
+        category.categoryName.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredCategories(filtered);
+    } else {
+      setFilteredCategories(categories);
+    }
+  };
+
+  const openMenu = (index) => {
+    setVisibleMenus((prevState) => ({
+      ...prevState,
+      [index]: true,
+    }));
+  };
+
+  const closeMenu = (index) => {
+    setVisibleMenus((prevState) => ({
+      ...prevState,
+      [index]: false,
+    }));
+  };
+
+  const handleUpdateCategory = (category) => {
+    navigation.navigate("UpdateCategory", { category });
+    closeMenu(category.id);
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    // Handle delete logic here
+    closeMenu(categoryId);
+  };
+
+  const handleCategoryPress = (category) => {
+    navigation.navigate("Details", { category });
+  };
+
+  const navigateToQuizScreen = (category) => {
+    navigation.navigate("Quiz", { category });
+    closeMenu(category.id);
+  };
+
+  const renderCategory = ({ item, index }) => (
+    <TouchableOpacity
+      onPress={() => handleCategoryPress(item)}
+      style={styles.categoryItem}
+    >
+      <View style={styles.categoryContent}>
+        <Text style={styles.categoryName}>{item.categoryName}</Text>
+        <Text style={styles.categoryInfo}>{item.totalQuestions} Questions</Text>
+        <Menu
+          visible={visibleMenus[index]}
+          onDismiss={() => closeMenu(index)}
+          anchor={
+            <TouchableOpacity onPress={() => openMenu(index)}>
+              <Ionicons name="ellipsis-vertical" size={24} color="black" />
+            </TouchableOpacity>
+          }
+        >
+          <Menu.Item
+            onPress={() => handleUpdateCategory(item)}
+            title="Update"
+          />
+          <Menu.Item
+            onPress={() => handleDeleteCategory(item.id)}
+            title="Delete"
+          />
+          <Divider />
+          <Menu.Item
+            onPress={() => navigateToQuizScreen(item)}
+            title="Take Quiz"
+          />
+        </Menu>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
-        <SystemBars animated={true} barStyle={"light-content"} />
-        <View style={styles.cardContainer}>
-          {newData.map((item, index) => {
-            if (index > currentIndex + MAX || index < currentIndex) {
-              return null;
-            }
-            return (
-              <Cards
-                newData={newData}
-                setNewData={setNewData}
-                maxVisibleItems={MAX}
-                item={item}
-                index={index}
-                dataLength={newData.length}
-                animatedValue={animatedValue}
-                currentIndex={currentIndex}
-                setCurrentIndex={setCurrentIndex}
-                key={index}
-              />
-            );
-          })}
-        </View>
-        <Text style={styles.text}>Recent Activity</Text>
-        <View style={styles.activityContainer}>
-          <Animated.ScrollView
-            showsVerticalScrollIndicator={false}
-            style={[{ width: "100%" }, animatedStyle]}
-          >
-            {newData[activityIndex]?.answers.map((item, index) => (
-              <Text key={index} style={styles.text}>
-                {item.answerText}
-              </Text>
-            ))}
-          </Animated.ScrollView>
-        </View>
-      </SafeAreaView>
-    </GestureHandlerRootView>
+    <View style={styles.container}>
+      <Text style={styles.title}>Your Flashcard Categories</Text>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search categories..."
+        placeholderTextColor="#aaa"
+        value={searchQuery}
+        onChangeText={handleSearch}
+      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#480ca8" />
+      ) : (
+        <FlatList
+          data={filteredCategories}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={renderCategory}
+          ListEmptyComponent={
+            <Text style={styles.noCategoriesText}>No categories found</Text>
+          }
+        />
+      )}
+    </View>
   );
 };
-
-export default FlashcardsScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#111111",
+    padding: 20,
+    backgroundColor: "#f0f4ff",
   },
-  cardContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  activityContainer: {
-    flex: 3 / 2,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  text: {
-    color: "white",
-    fontSize: 32,
+  title: {
+    fontSize: 24,
     fontWeight: "bold",
-    position: "relative",
-    paddingHorizontal: 16,
+    color: "#2c3e50",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  searchInput: {
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    color: "#333",
+    borderRadius: 10,
+    marginBottom: 20,
+    elevation: 2,
+  },
+  categoryItem: {
+    backgroundColor: "#fff",
+    padding: 15,
+    marginBottom: 15,
+    borderRadius: 10,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  categoryContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  categoryName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#480ca8",
+  },
+  categoryInfo: {
+    fontSize: 14,
+    color: "#333",
+  },
+  noCategoriesText: {
+    textAlign: "center",
+    color: "#aaa",
+    fontSize: 16,
+    marginTop: 20,
   },
 });
+
+export default FlashcardsScreen;

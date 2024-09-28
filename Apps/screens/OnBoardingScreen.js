@@ -4,20 +4,17 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 const OnboardingScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      {/* Image Section */}
       <Image
         source={require("../../assets/flash.png")}
         style={styles.image}
         resizeMode="contain"
       />
 
-      {/* Text Section */}
-      <Text style={styles.title}>Welcome to Brine Flashcards!</Text>
+      <Text style={styles.title}>Elevate Your Learning with Quizio!</Text>
       <Text style={styles.subtitle}>
-        Learn efficiently with AI-powered chatbot assistance
+        Create Flashcards, Take Quizzes, and Watch Your Knowledge Grow
       </Text>
 
-      {/* Button Section */}
       <TouchableOpacity
         style={styles.button}
         onPress={() => navigation.navigate("Login")}

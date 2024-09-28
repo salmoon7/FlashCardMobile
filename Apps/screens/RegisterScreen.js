@@ -5,11 +5,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import LottieView from "lottie-react-native";
 
 // Regular expression for password validation
 const validationPassword =
@@ -30,7 +30,7 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
 
-    setLoading(true); // Start loading
+    setLoading(true);
 
     try {
       const response = await fetch(
@@ -72,9 +72,9 @@ const RegisterScreen = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Text style={styles.title}>Join Brine Flashcards Today!</Text>
+      <Text style={styles.title}>Start Mastering Concepts with Quizio!</Text>
       <Text style={styles.subtitle}>
-        Unlock Efficient Learning with AI Assistance
+        Create, Quiz, and Track Your Learning Progress
       </Text>
 
       <TextInput
@@ -153,11 +153,7 @@ const RegisterScreen = ({ navigation }) => {
 
       {/* Show Lottie animation when loading is true */}
       {loading ? (
-        <LottieView
-          source={require("../../assets/loading.json")}
-          loop
-          style={styles.loadingAnimation}
-        />
+        <ActivityIndicator size="large" color="#480ca8" />
       ) : (
         <TouchableOpacity style={styles.button} onPress={handleRegistration}>
           <Text style={styles.buttonText}>Sign Up</Text>
