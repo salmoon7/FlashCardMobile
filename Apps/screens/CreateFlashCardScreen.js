@@ -9,6 +9,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import LottieView from "lottie-react-native";
 import { UserContext } from "../../api/ContextApi";
@@ -24,10 +25,13 @@ const CreateFlashcardScreen = ({ navigation }) => {
   const { user } = useContext(UserContext);
 
   const handleCreateFlashcard = async () => {
-    if (!question || !answer || !category) {
+    if (!question.trim() || !answer.trim() || !category.trim()) {
+      Alert.alert(
+        "Input Error",
+        "Question, Answer, and Category fields cannot be empty."
+      );
       return;
     }
-
     setLoading(true);
     try {
       const response = await fetch(
@@ -59,8 +63,8 @@ const CreateFlashcardScreen = ({ navigation }) => {
 
           // Navigate back to home and pass the new category
           navigation.navigate("HomeTabs", {
-            screen: "MyFlashcards",
-            params: { newCategory: category },
+            screen: "Home",
+            // params: { newCategory: category },
           });
         }, 2000);
       }

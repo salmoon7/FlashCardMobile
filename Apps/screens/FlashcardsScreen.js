@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useCallback, useContext } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+
 import { Menu, Divider } from "react-native-paper";
 import { UserContext } from "../../api/ContextApi";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,9 +24,11 @@ const FlashcardsScreen = () => {
   const navigation = useNavigation();
   const [visibleMenus, setVisibleMenus] = useState({});
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchCategories();
+    }, [user.id])
+  );
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -35,7 +38,7 @@ const FlashcardsScreen = () => {
       );
       const data = await response.json();
       if (response.ok) {
-        setCategories(data.categories);
+        setCategories(data.categories || null);
         setFilteredCategories(data.categories);
       } else {
         Alert.alert("Error", data.message || "Failed to load categories");
@@ -74,7 +77,7 @@ const FlashcardsScreen = () => {
   };
 
   const handleUpdateCategory = (category) => {
-    navigation.navigate("UpdateCategory", { category });
+    // navigation.navigate("UpdateCategory", { category });
     closeMenu(category.id);
   };
 
@@ -144,6 +147,7 @@ const FlashcardsScreen = () => {
           data={filteredCategories}
           keyExtractor={(item, index) => index.toString()}
           renderItem={renderCategory}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <Text style={styles.noCategoriesText}>No categories found</Text>
           }

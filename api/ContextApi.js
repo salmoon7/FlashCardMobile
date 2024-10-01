@@ -15,10 +15,10 @@ export const UserProvider = ({ children }) => {
     categoriesCreated: 0,
   });
 
-  const updateProfileImage = (imageUri) => {
-    setUser((prevState) => ({
-      ...prevState,
-      profileImage: imageUri,
+  const updateProfileImage = (newImageUri) => {
+    setUser((prevUser) => ({
+      ...prevUser,
+      profileImage: newImageUri,
     }));
   };
 

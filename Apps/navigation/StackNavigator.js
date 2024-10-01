@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { Text } from "react-native";
 import React from "react";
 
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -25,12 +25,39 @@ const StackNavigator = () => {
         component={OnBoardingScreen}
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ gestureEnabled: false }}
+      />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <Stack.Screen name="Details" component={CategoryDetailScreen} />
-      <Stack.Screen name="HomeTabs" component={TabNavigators} />
-      <Stack.Screen name="Quiz" component={QuizScreen} />
+      <Stack.Screen
+        name="Details"
+        component={CategoryDetailScreen}
+        options={{
+          headerShown: true,
+          headerBackTitleVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="HomeTabs"
+        component={TabNavigators}
+        options={{ gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="Quiz"
+        component={QuizScreen}
+        options={{
+          headerShown: true,
+          gestureEnabled: false,
+          headerStyle: {
+            backgroundColor: "#480ca8",
+          },
+          headerBackTitleVisible: false,
+          headerTintColor: "#fff",
+        }}
+      />
     </Stack.Navigator>
   );
 };

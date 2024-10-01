@@ -1,17 +1,19 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   Dimensions,
+  Image,
   ActivityIndicator,
   ScrollView,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import ProgressBar from "../components/ProgressBar";
 import { Menu, Divider } from "react-native-paper";
-import { UserContext } from "../../api/ContextApi"; // Import the UserContext
+import { UserContext } from "../../api/ContextApi";
 import LottieView from "lottie-react-native";
 
 const { width } = Dimensions.get("window");
@@ -19,40 +21,41 @@ const { width } = Dimensions.get("window");
 const HomeScreen = ({ route, navigation }) => {
   const { name } = route.params || { name: "User" };
   const { user, profileImage, chartData, setChartData } =
-    useContext(UserContext); // Get chartData from UserContext
+    useContext(UserContext);
   const userId = user.id;
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visibleMenus, setVisibleMenus] = useState({});
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch(
-          `https://flashcard-klqk.onrender.com/api/user/categories/${userId}`
-        );
-        const data = await response.json();
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://flashcard-klqk.onrender.com/api/user/categories/${userId}`
+      );
+      const data = await response.json();
 
-        // Store categories and progress into state
-        setCategories(data.categories);
-        setLoading(false);
+      setCategories(data.categories || []);
+      setLoading(false);
 
-        // Optionally, update chartData based on backend if needed
-        setChartData((prevData) => ({
-          ...prevData,
-          totalFlashcards: data.categories.length,
-          quizzesTaken: 0, // Update this based on your logic
-          categoriesCreated: data.categories.length,
-        }));
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        setLoading(false);
-      }
-    };
+      setChartData((prevData) => ({
+        ...prevData,
+        totalFlashcards: data.categories ? data.categories.length : 0,
+        quizzesTaken: 0,
+        categoriesCreated: data.categories ? data.categories.length : 0,
+      }));
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setLoading(false);
+    }
+  };
 
-    fetchCategories();
-  }, [userId, setChartData]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchCategories();
+    }, [userId])
+  );
 
   const openMenu = (index) => {
     setVisibleMenus((prevState) => ({
@@ -91,37 +94,41 @@ const HomeScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View className="flex-1 bg-white flex">
+    <View style={styles.container}>
       {/* Top section */}
-      <View className="bg-primary h-[350px] w-full rounded-b-xl p-4 flex-col justify-between">
-        <View className="flex flex-row justify-between items-center p-2">
+      <View style={styles.topSection}>
+        <View style={styles.header}>
           <Text style={styles.greeting}>Hi, {name}!</Text>
-          <View style={styles.initialsContainer}>
-            {profileImage ? (
+          <TouchableOpacity
+            style={styles.initialsContainer}
+            onPress={() => navigation.navigate("Settings")}
+          >
+            {user.profileImage ? (
               <Image
-                source={{ uri: profileImage }}
+                source={{ uri: user.profileImage }}
                 style={styles.profileImage}
               />
             ) : (
               <View style={styles.initialsContainer}>
-                <Text style={styles.initials}>{name[0]}</Text>
+                <Text style={styles.initials}>
+                  {name
+                    .split(" ")
+                    .map((n) => n[0].toUpperCase())
+                    .join("")}
+                </Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Categories */}
-        <View className="flex flex-col justify-center p-2">
-          <Text className="text-white font-bold text-[24px] font-mono">
-            Categories
-          </Text>
-          <Text className="text-purple-300 font-serif font-semibold">
-            Pick a set to practice
-          </Text>
+        <View style={styles.categoryHeader}>
+          <Text style={styles.categoryTitle}>Categories</Text>
+          <Text style={styles.categorySubtitle}>Pick a set to practice</Text>
         </View>
 
         {/* Add and My Flashcards Buttons */}
-        <View className="flex flex-row m-auto space-x-8">
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.card}
             onPress={() => navigation.navigate("Create Flashcard")}
@@ -140,23 +147,21 @@ const HomeScreen = ({ route, navigation }) => {
       </View>
 
       {/* Bottom section to display categories */}
-      <View className="flex-1 p-4">
-        <Text className="text-xl font-bold mb-4">Progress</Text>
-        <ScrollView className="space-y-4" showsVerticalScrollIndicator="false">
+      <View style={styles.bottomSection}>
+        <Text style={styles.progressHeader}>Progress</Text>
+        <ScrollView showsVerticalScrollIndicator="false">
           {loading ? (
             <ActivityIndicator size="large" color="#480ca8" />
-          ) : categories && categories.length > 0 ? (
+          ) : categories.length > 0 ? (
             categories.map((category, index) => (
               <TouchableOpacity
                 key={index}
                 style={styles.progressCard}
                 onPress={() => navigateToFlashCardScreen(category.categoryName)}
               >
-                <View className="flex-row justify-between items-center">
+                <View style={styles.categoryRow}>
                   {/* Display the category name */}
-                  <Text style={styles.categoryTitle}>
-                    {category.categoryName}
-                  </Text>
+                  <Text style={styles.textTitle}>{category.categoryName}</Text>
 
                   {/* 3 Dots Menu */}
                   <Menu
@@ -190,17 +195,16 @@ const HomeScreen = ({ route, navigation }) => {
                   </Menu>
                 </View>
 
-                {/* Display the correct progress */}
                 <ProgressBar
                   progress={
-                    category.savedProgress || parseFloat(category.progress)
+                    category.savedProgress || parseFloat(category.progress) || 0
                   }
                   color="#6200ee"
                 />
                 <Text>
                   {category.savedProgress
-                    ? `${category.savedProgress.toFixed(2)}%`
-                    : `${category.progress}%`}
+                    ? `${category.savedProgress.toFixed(2)}`
+                    : `${category.progress || 0}`}
                 </Text>
               </TouchableOpacity>
             ))
@@ -212,7 +216,7 @@ const HomeScreen = ({ route, navigation }) => {
                 loop
                 style={styles.lottieAnimation}
               />
-              <Text style={styles.emptyText}>No flashcard yet</Text>
+              <Text style={styles.emptyText}>No flashcards yet</Text>
             </View>
           )}
         </ScrollView>
@@ -224,14 +228,27 @@ const HomeScreen = ({ route, navigation }) => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  initials: {
-    fontSize: 50,
-    fontWeight: "bold",
-    color: "#480ca8",
-    marginBottom: 10,
+  container: {
+    flex: 1,
+    backgroundColor: "white",
+  },
+  topSection: {
+    backgroundColor: "#480ca8",
+    height: 350,
+    width: "100%",
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    padding: 16,
+    justifyContent: "space-between",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   greeting: {
     fontSize: 24,
+    fontWeight: "bold",
     color: "white",
   },
   initialsContainer: {
@@ -248,12 +265,44 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 4,
   },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 60,
+    borderWidth: 2,
+    borderColor: "#333",
+  },
+  categoryHeader: {
+    flexDirection: "column",
+    justifyContent: "center",
+    padding: 8,
+  },
+  categoryTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "white",
+  },
+  textTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "black",
+  },
+  categorySubtitle: {
+    color: "#d4c0e4",
+    fontWeight: "600",
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    marginTop: 20,
+    justifyContent: "center",
+  },
   card: {
     alignItems: "center",
     backgroundColor: "#f0f0f0",
     borderRadius: 10,
-    padding: 10,
+    padding: 24,
     width: "40%",
+    marginHorizontal: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -261,36 +310,46 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   cardText: {
-    marginTop: 5,
-    fontWeight: "bold",
+    fontSize: 16,
     color: "#480ca8",
   },
-  progressCard: {
+  bottomSection: {
+    flex: 1,
     padding: 16,
+  },
+  progressHeader: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  progressCard: {
     backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 4,
   },
-  categoryTitle: {
-    fontWeight: "bold",
-    fontSize: 16,
+  categoryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    height: 200,
+    height: "100%",
   },
   lottieAnimation: {
-    width: 150,
-    height: 150,
+    width: 200,
+    height: 200,
   },
   emptyText: {
+    marginTop: 10,
     fontSize: 18,
-    color: "#555",
+    color: "gray",
   },
 });

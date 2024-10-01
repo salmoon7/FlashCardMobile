@@ -31,13 +31,14 @@ const SettingsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false); // Loading state for logout
 
   useEffect(() => {
-    const loadThemePreference = async () => {
-      const storedTheme = await AsyncStorage.getItem("themePreference");
-      if (storedTheme) {
-        toggleTheme(storedTheme === "dark");
-      }
+    // Load theme and profile image from AsyncStorage
+    const loadUserData = async () => {
+      const storedProfileImage = await AsyncStorage.getItem("profileImage");
+      const storedBio = await AsyncStorage.getItem("bio");
+      if (storedProfileImage) setProfileImage(storedProfileImage);
+      if (storedBio) setBio(storedBio);
     };
-    loadThemePreference();
+    loadUserData();
   }, []);
 
   const handlePickImage = async () => {
@@ -50,14 +51,17 @@ const SettingsScreen = ({ navigation }) => {
 
     if (!result.canceled && result.assets?.length > 0) {
       const newImageUri = result.assets[0].uri;
-      updateProfileImage(newImageUri);
+      updateProfileImage(newImageUri); // Update in context
       setUser({ ...user, profileImage: newImageUri });
-      await AsyncStorage.setItem("profileImage", newImageUri);
+      setProfileImage(newImageUri);
+      await AsyncStorage.setItem("profileImage", newImageUri); // Save to AsyncStorage
     }
   };
 
+  // Save changes to name, email, bio and persist them
   const handleSaveChanges = async () => {
     setUser({ ...user, name, email, bio });
+    await AsyncStorage.setItem("bio", bio); // Save bio to AsyncStorage
     Alert.alert("Changes saved!");
   };
 
@@ -196,6 +200,18 @@ const SettingsScreen = ({ navigation }) => {
             placeholderTextColor="#888"
             multiline
           />
+          <TouchableOpacity
+            onPress={handleSaveChanges}
+            style={{
+              backgroundColor: "#480ca8",
+              padding: 10,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "bold" }}>
+              Save Changes
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Centered Graph */}
@@ -226,7 +242,7 @@ const SettingsScreen = ({ navigation }) => {
               ],
             }}
             width={Dimensions.get("window").width - 60}
-            height={220}
+            height={290}
             yAxisLabel=""
             chartConfig={{
               backgroundColor: "#480ca8",
@@ -259,7 +275,11 @@ const SettingsScreen = ({ navigation }) => {
           <Text style={{ color: isDarkTheme ? "#fff" : "#000", fontSize: 16 }}>
             Dark Mode
           </Text>
-          <Switch value={isDarkTheme} onValueChange={toggleTheme} />
+          <Switch
+            value={isDarkTheme}
+            onValueChange={toggleTheme}
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+          />
         </View>
 
         {/* Logout Button and Activity Indicator */}

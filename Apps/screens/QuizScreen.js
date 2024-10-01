@@ -9,10 +9,13 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   StyleSheet,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { ProgressBar } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LottieView from "lottie-react-native";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 import correctAnimation from "../../util/correct.json";
 import wrongAnimation from "../../util/wrong.json";
@@ -27,6 +30,7 @@ const QuizScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(false);
   const [showCorrectModal, setShowCorrectModal] = useState(false);
   const [showWrongModal, setShowWrongModal] = useState(false);
+  const [showBadgeModal, setShowBadgeModal] = useState(false); // For badge achievements
 
   const questions = category.questions || [];
   const currentQuestion = questions[currentQuestionIndex];
@@ -46,13 +50,14 @@ const QuizScreen = ({ route, navigation }) => {
         setCurrentQuestionIndex(currentQuestionIndex);
         setCorrectAnswers(correctAnswers);
         setProgress(progress);
+      } else {
+        setProgress(0);
       }
     } catch (error) {
       console.error("Error loading quiz progress", error);
     }
   };
 
-  // Function to save quiz progress to AsyncStorage
   const saveQuizProgress = async () => {
     try {
       const progressData = {
@@ -71,14 +76,27 @@ const QuizScreen = ({ route, navigation }) => {
 
   const handleAnswerSubmission = () => {
     const userAnswer = answer.trim().toLowerCase();
+
+    if (!userAnswer) {
+      Alert.alert("Input Error", "Answer cannot be empty.");
+      return;
+    }
+
     const correctAnswer = currentQuestion.answerText.trim().toLowerCase();
 
     if (userAnswer === correctAnswer) {
-      setCorrectAnswers(correctAnswers + 1);
+      const newCorrectAnswers = correctAnswers + 1;
+      setCorrectAnswers(newCorrectAnswers);
 
-      const newProgress = ((correctAnswers + 1) / questions.length) * 100;
+      const newProgress = (newCorrectAnswers / questions.length) * 100;
       setProgress(newProgress);
+
       setShowCorrectModal(true);
+
+      if (newProgress >= 50 && newProgress < 75) {
+        setShowBadgeModal(true); // Show badge at 50% progress
+      }
+
       if (currentQuestionIndex + 1 === questions.length) {
         setQuizCompleted(true);
         setShowCorrectModal(false);
@@ -97,12 +115,13 @@ const QuizScreen = ({ route, navigation }) => {
 
   const handleReviewFlashcards = () => {
     setShowWrongModal(false);
-    navigation.navigate("Flashcards");
+    navigation.navigate("Details", { category: category });
   };
 
   const handleTryAgain = () => {
     setShowWrongModal(false);
   };
+
   const handleQuizReset = async () => {
     setCurrentQuestionIndex(0);
     setCorrectAnswers(0);
@@ -112,29 +131,45 @@ const QuizScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <Text style={styles.categoryTitle}>{category.categoryName}</Text>
       <ProgressBar
         progress={progress / 100}
         color="#6200ee"
         style={styles.progressBar}
       />
+      <View style={styles.circularDecoration} />
 
       {loading ? (
         <ActivityIndicator size="large" color="#6200ee" />
       ) : quizCompleted ? (
         <View style={styles.resultContainer}>
+          {/* <LottieView
+            source={badgeAnimation}
+            autoPlay
+            loop={false}
+            style={styles.lottie}
+          /> */}
           <Text style={styles.resultText}>Quiz Completed!</Text>
           <Text style={styles.resultText}>
             You got {correctAnswers}/{questions.length} correct.
           </Text>
           <Button title="Restart Quiz" onPress={handleQuizReset} />
+          <Button
+            title="Go back to Home"
+            onPress={() => navigation.navigate("Home")}
+          />
         </View>
       ) : (
         <View style={styles.quizContainer}>
-          <Text style={styles.questionText}>
-            {currentQuestion.questionText}
-          </Text>
+          <View style={styles.questionCard}>
+            <Text style={styles.questionText}>
+              {currentQuestion.questionText}
+            </Text>
+          </View>
 
           <TextInput
             style={styles.answerInput}
@@ -151,7 +186,7 @@ const QuizScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       )}
-      {/* Correct Answer Modal */}
+
       <Modal visible={showCorrectModal} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <LottieView
@@ -164,7 +199,6 @@ const QuizScreen = ({ route, navigation }) => {
         </View>
       </Modal>
 
-      {/* Wrong Answer Modal */}
       <Modal visible={showWrongModal} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <LottieView
@@ -175,12 +209,21 @@ const QuizScreen = ({ route, navigation }) => {
           />
           <Text style={styles.modalText}>Oops! You made a mistake.</Text>
 
-          {/* Buttons for Reviewing Flashcards or Trying Again */}
           <Button title="Review Flashcards" onPress={handleReviewFlashcards} />
           <Button title="Try Again" onPress={handleTryAgain} />
         </View>
       </Modal>
-    </View>
+
+      <Modal visible={showBadgeModal} transparent={true} animationType="slide">
+        <View style={styles.modalContainer}>
+          <Icon name="medal" size={50} color="#ffd700" />
+          <Text style={styles.modalText}>
+            Great! You've reached 50% progress!
+          </Text>
+          <Button title="Continue" onPress={() => setShowBadgeModal(false)} />
+        </View>
+      </Modal>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -188,13 +231,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#480ca8",
+    position: "relative",
   },
   categoryTitle: {
     fontSize: 24,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 20,
+    color: "white",
   },
   progressBar: {
     height: 10,
@@ -204,6 +249,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  questionCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 15,
+    padding: 30,
+    width: "90%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    marginBottom: 20,
   },
   button: {
     backgroundColor: "#480ca8",
@@ -226,6 +283,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     marginBottom: 20,
     textAlign: "center",
+    color: "#000",
   },
   answerInput: {
     borderWidth: 1,
@@ -236,30 +294,44 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#fff",
   },
+  curvedCircle: {
+    position: "absolute",
+    top: 20,
+    right: 0,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "gold",
+    zIndex: 999,
+    elevation: 10,
+  },
   resultContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
   resultText: {
-    fontSize: 20,
+    fontSize: 22,
+    fontWeight: "bold",
+    textAlign: "center",
     marginVertical: 10,
   },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.7)", // Slightly transparent background
-  },
-  lottie: {
-    width: 150,
-    height: 150,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
   },
   modalText: {
-    fontSize: 20,
-    fontWeight: "bold",
     color: "#fff",
-    marginTop: 20,
+    fontSize: 22,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginVertical: 20,
+  },
+  lottie: {
+    width: 200,
+    height: 200,
   },
 });
 
