@@ -245,6 +245,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 30,
   },
   greeting: {
     fontSize: 24,
@@ -253,9 +254,9 @@ const styles = StyleSheet.create({
   },
   initialsContainer: {
     backgroundColor: "white",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 10,
@@ -265,10 +266,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 4,
   },
+  initials: {
+    fontSize: 40,
+    fontWeight: "bold",
+    color: "#480ca8",
+  },
   profileImage: {
     width: 80,
     height: 80,
-    borderRadius: 60,
+    borderRadius: 40,
     borderWidth: 2,
     borderColor: "#333",
   },
