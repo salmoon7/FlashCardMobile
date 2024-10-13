@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   Modal,
 } from "react-native";
-import LottieView from "lottie-react-native";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");

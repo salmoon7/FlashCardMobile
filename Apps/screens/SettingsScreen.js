@@ -32,6 +32,8 @@ const SettingsScreen = ({ navigation }) => {
 
   useEffect(() => {
     // Load theme and profile image from AsyncStorage
+
+    console.log("ChartData", chartData);
     const loadUserData = async () => {
       const storedProfileImage = await AsyncStorage.getItem("profileImage");
       const storedBio = await AsyncStorage.getItem("bio");
@@ -230,12 +232,12 @@ const SettingsScreen = ({ navigation }) => {
 
           <BarChart
             data={{
-              labels: ["Flashcards", "Quizzes", "Categories"],
+              labels: ["Flashcards", "Categories"],
               datasets: [
                 {
                   data: [
                     chartData.totalFlashcards,
-                    chartData.quizzesTaken,
+
                     chartData.categoriesCreated,
                   ],
                 },

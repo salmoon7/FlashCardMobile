@@ -23,7 +23,7 @@ const CreateFlashcardScreen = ({ navigation }) => {
   const [success, setSuccess] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const { user } = useContext(UserContext);
-
+  console.log(user.id);
   const handleCreateFlashcard = async () => {
     if (!question.trim() || !answer.trim() || !category.trim()) {
       Alert.alert(

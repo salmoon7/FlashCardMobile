@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useState, useContext, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,15 +11,18 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UserContext } from "../../api/ContextApi";
 import ProgressBar from "../components/ProgressBar";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 const CategoryScreen = ({ navigation }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const { user, setChartData } = useContext(UserContext);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchCategories();
+    }, [user.id])
+  );
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -54,12 +57,20 @@ const CategoryScreen = ({ navigation }) => {
             acc + (category.questions ? category.questions.length : 0),
           0
         );
-
+        console.log("Anserwd question", data.categories.answeredQuestions);
         // Use answeredQuestions to calculate quizzes taken
         const quizzesTaken = data.categories.reduce(
-          (acc, category) => acc + (category.answeredQuestions || 0),
-          0
+          (acc, category) => acc + (category.answeredQuestions || 0)
         );
+        if (typeof quizzesTaken === "object") {
+          console.log("Quizzes taken (as object):", quizzesTaken);
+
+          // Assuming quizzesTaken has a property 'count' that holds the number
+          quizzesTaken = quizzesTaken.count; // Adjust this depending on the structure of your object
+        }
+
+        console.log("Quizzes taken:", quizzesTaken);
+        console.log("Categories created:", data.categories.length);
 
         console.log("Final categories data:", data.categories);
         console.log("Total flashcards:", totalFlashcardsCount);

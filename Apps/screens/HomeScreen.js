@@ -113,7 +113,7 @@ const HomeScreen = ({ route, navigation }) => {
                 <Text style={styles.initials}>
                   {name
                     .split(" ")
-                    .map((n) => n[0].toUpperCase())
+                    .map((n) => n.charAt(0).toUpperCase())
                     .join("")}
                 </Text>
               </View>

@@ -30,7 +30,6 @@ const QuizScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(false);
   const [showCorrectModal, setShowCorrectModal] = useState(false);
   const [showWrongModal, setShowWrongModal] = useState(false);
-  const [showBadgeModal, setShowBadgeModal] = useState(false); // For badge achievements
 
   const questions = category.questions || [];
   const currentQuestion = questions[currentQuestionIndex];
@@ -93,10 +92,6 @@ const QuizScreen = ({ route, navigation }) => {
 
       setShowCorrectModal(true);
 
-      if (newProgress >= 50 && newProgress < 75) {
-        setShowBadgeModal(true); // Show badge at 50% progress
-      }
-
       if (currentQuestionIndex + 1 === questions.length) {
         setQuizCompleted(true);
         setShowCorrectModal(false);
@@ -147,12 +142,6 @@ const QuizScreen = ({ route, navigation }) => {
         <ActivityIndicator size="large" color="#6200ee" />
       ) : quizCompleted ? (
         <View style={styles.resultContainer}>
-          {/* <LottieView
-            source={badgeAnimation}
-            autoPlay
-            loop={false}
-            style={styles.lottie}
-          /> */}
           <Text style={styles.resultText}>Quiz Completed!</Text>
           <Text style={styles.resultText}>
             You got {correctAnswers}/{questions.length} correct.
@@ -176,6 +165,7 @@ const QuizScreen = ({ route, navigation }) => {
             placeholder="Type your answer"
             value={answer}
             onChangeText={setAnswer}
+            autoFocus={true}
           />
 
           <TouchableOpacity
@@ -211,16 +201,6 @@ const QuizScreen = ({ route, navigation }) => {
 
           <Button title="Review Flashcards" onPress={handleReviewFlashcards} />
           <Button title="Try Again" onPress={handleTryAgain} />
-        </View>
-      </Modal>
-
-      <Modal visible={showBadgeModal} transparent={true} animationType="slide">
-        <View style={styles.modalContainer}>
-          <Icon name="medal" size={50} color="#ffd700" />
-          <Text style={styles.modalText}>
-            Great! You've reached 50% progress!
-          </Text>
-          <Button title="Continue" onPress={() => setShowBadgeModal(false)} />
         </View>
       </Modal>
     </KeyboardAvoidingView>
