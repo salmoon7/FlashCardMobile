@@ -1,40 +1,38 @@
-import React, { useState, useRef, useContext } from "react";
-import { UserContext } from "../../api/ContextApi";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Alert,
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
-  Modal,
 } from "react-native";
+import { UserContext } from "../../api/ContextApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const LoginScreen = ({ navigation }) => {
+  const { setUser, login } = useContext(UserContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const animation = useRef(null);
-  const { setUser } = useContext(UserContext);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       Alert.alert("Error", "Please enter both email and password.");
       return;
     }
+
     setLoading(true);
+
     try {
       const response = await fetch(
         "https://flashcard-klqk.onrender.com/api/user/login",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         }
       );
@@ -42,28 +40,27 @@ const LoginScreen = ({ navigation }) => {
       const data = await response.json();
 
       if (response.ok) {
-        if (data.user && data.user.name) {
-          setUser(data.user);
-          const { name } = data.user;
-          console.log("Username:", name);
-          await AsyncStorage.setItem("userToken", data.user.token);
-          // Reset email and password
+        if (data.user && data.user.token) {
+         
+    // Call login with both user and token
+    await login(data.user, data.user.token);
+
+          // Clear form
           setEmail("");
           setPassword("");
-          setLoading(false);
 
-          navigation.navigate("HomeTabs", { screen: "Home", params: { name } });
+          // Navigate to home
+          navigation.replace("HomeTabs", { screen: "Home" });
         } else {
-          Alert.alert("Login Failed", "User data is missing.");
-          setLoading(false);
+          Alert.alert("Login Failed", "Invalid user data received.");
         }
       } else {
-        Alert.alert("Login Failed", data.message);
-        setLoading(false);
+        Alert.alert("Login Failed", data.message || "Check credentials.");
       }
     } catch (error) {
-      console.error("Login error", error);
+      console.error("Login error:", error);
       Alert.alert("Error", "An error occurred during login.");
+    } finally {
       setLoading(false);
     }
   };
@@ -86,7 +83,7 @@ const LoginScreen = ({ navigation }) => {
         autoCapitalize="none"
         onChangeText={setEmail}
         value={email}
-        className="border-b-2 border-primary p-2 w-full"
+        editable={!loading}
       />
 
       <TextInput
@@ -95,34 +92,37 @@ const LoginScreen = ({ navigation }) => {
         placeholderTextColor="#aaa"
         secureTextEntry
         onChangeText={setPassword}
-        className="border-b-2 border-primary p-2 w-full"
         value={password}
+        editable={!loading}
       />
 
-      <TouchableOpacity
-        style={styles.button}
+      <Pressable
+        style={({ pressed }) => [
+          styles.button,
+          { opacity: pressed || loading ? 0.7 : 1 },
+        ]}
         onPress={handleLogin}
         disabled={loading}
       >
-        <Text style={styles.buttonText}>
-          {loading ? "Signing In..." : "Sign In"}
-        </Text>
-      </TouchableOpacity>
+        {loading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Sign In</Text>
+        )}
+      </Pressable>
 
       <View style={styles.footerLinks}>
-        <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+        <Pressable onPress={() => navigation.navigate("ForgotPassword")}>
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+        <Pressable onPress={() => navigation.navigate("Register")}>
           <Text style={styles.switchText}>
             Don't have an account?{" "}
             <Text style={styles.switchTextBold}>Join Now</Text>
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
-
-      {loading && <ActivityIndicator size="large" color="#480ca8" />}
     </KeyboardAvoidingView>
   );
 };
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 30,
     justifyContent: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
   },
   title: {
     fontSize: 28,
@@ -155,13 +155,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
   },
   button: {
     backgroundColor: "#480ca8",
     paddingVertical: 15,
     borderRadius: 30,
     alignItems: "center",
-    margin: 20,
+    marginVertical: 20,
     elevation: 2,
   },
   buttonText: {
@@ -188,25 +191,6 @@ const styles = StyleSheet.create({
   switchTextBold: {
     color: "#480ca8",
     fontWeight: "bold",
-  },
-  lottie: {
-    width: 150,
-    height: 150,
-  },
-  // Modal styles
-  modalBackground: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalContent: {
-    width: 200,
-    height: 200,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 10,
   },
 });
 

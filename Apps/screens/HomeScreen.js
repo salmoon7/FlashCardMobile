@@ -20,8 +20,7 @@ const { width } = Dimensions.get("window");
 
 const HomeScreen = ({ route, navigation }) => {
   const { name } = route.params || { name: "User" };
-  const { user, profileImage, chartData, setChartData } =
-    useContext(UserContext);
+  const { user, profileImage, chartData, setChartData } = useContext(UserContext);
   const userId = user.id;
 
   const [categories, setCategories] = useState([]);
@@ -31,19 +30,16 @@ const HomeScreen = ({ route, navigation }) => {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `https://flashcard-klqk.onrender.com/api/user/categories/${userId}`
-      );
+      const response = await fetch(`https://flashcard-klqk.onrender.com/api/user/categories/${userId}`);
       const data = await response.json();
-
       setCategories(data.categories || []);
       setLoading(false);
 
       setChartData((prevData) => ({
         ...prevData,
-        totalFlashcards: data.categories ? data.categories.length : 0,
+        totalFlashcards: data.categories?.length || 0,
         quizzesTaken: 0,
-        categoriesCreated: data.categories ? data.categories.length : 0,
+        categoriesCreated: data.categories?.length || 0,
       }));
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -58,17 +54,11 @@ const HomeScreen = ({ route, navigation }) => {
   );
 
   const openMenu = (index) => {
-    setVisibleMenus((prevState) => ({
-      ...prevState,
-      [index]: true,
-    }));
+    setVisibleMenus((prev) => ({ ...prev, [index]: true }));
   };
 
   const closeMenu = (index) => {
-    setVisibleMenus((prevState) => ({
-      ...prevState,
-      [index]: false,
-    }));
+    setVisibleMenus((prev) => ({ ...prev, [index]: false }));
   };
 
   const handleUpdate = (category) => {
@@ -95,19 +85,16 @@ const HomeScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Top section */}
       <View style={styles.topSection}>
         <View style={styles.header}>
-          <Text style={styles.greeting}>Hi, {name}!</Text>
-          <TouchableOpacity
-            style={styles.initialsContainer}
-            onPress={() => navigation.navigate("Settings")}
-          >
+          <View>
+            <Text style={styles.greeting}>Hi, {name.split(" ")[0]} 👋</Text>
+            <Text style={styles.subGreeting}>Ready to learn something new?</Text>
+          </View>
+
+          <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
             {user.profileImage ? (
-              <Image
-                source={{ uri: user.profileImage }}
-                style={styles.profileImage}
-              />
+              <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
             ) : (
               <View style={styles.initialsContainer}>
                 <Text style={styles.initials}>
@@ -121,106 +108,76 @@ const HomeScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Categories */}
-        <View style={styles.categoryHeader}>
-          <Text style={styles.categoryTitle}>Categories</Text>
-          <Text style={styles.categorySubtitle}>Pick a set to practice</Text>
-        </View>
-
-        {/* Add and My Flashcards Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate("Create Flashcard")}
-          >
-            <Ionicons name="add-circle-outline" size={32} color="#480ca8" />
-            <Text style={styles.cardText}>Add Flashcard</Text>
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("Create Flashcard")}>
+            <Ionicons name="add-circle-outline" size={28} color="#480ca8" />
+            <Text style={styles.cardText}>Add</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate("Flashcards")}
-          >
-            <Ionicons name="list-circle-outline" size={32} color="#480ca8" />
-            <Text style={styles.cardText}>My Flashcards</Text>
+
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("Flashcards")}>
+            <Ionicons name="list-circle-outline" size={28} color="#480ca8" />
+            <Text style={styles.cardText}>My Sets</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Bottom section to display categories */}
-      <View style={styles.bottomSection}>
-        <Text style={styles.progressHeader}>Progress</Text>
-        <ScrollView showsVerticalScrollIndicator="false">
-          {loading ? (
-            <ActivityIndicator size="large" color="#480ca8" />
-          ) : categories.length > 0 ? (
-            categories.map((category, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.progressCard}
-                onPress={() => navigateToFlashCardScreen(category.categoryName)}
-              >
-                <View style={styles.categoryRow}>
-                  {/* Display the category name */}
+      <ScrollView style={styles.bottomSection} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
+        <Text style={styles.progressHeader}>Your Categories</Text>
+
+        {loading ? (
+          <ActivityIndicator size="large" color="#480ca8" style={{ marginTop: 40 }} />
+        ) : categories.length > 0 ? (
+          categories.map((category, index) => (
+            <View key={index} style={styles.progressCard}>
+              <View style={styles.categoryRow}>
+                <TouchableOpacity
+                  style={{ flex: 1 }}
+                  onPress={() => navigateToFlashCardScreen(category.categoryName)}
+                >
                   <Text style={styles.textTitle}>{category.categoryName}</Text>
+                </TouchableOpacity>
 
-                  {/* 3 Dots Menu */}
-                  <Menu
-                    visible={visibleMenus[index]}
-                    onDismiss={() => closeMenu(index)}
-                    anchor={
-                      <TouchableOpacity onPress={() => openMenu(index)}>
-                        <Ionicons
-                          name="ellipsis-vertical"
-                          size={24}
-                          color="black"
-                        />
-                      </TouchableOpacity>
-                    }
-                  >
-                    <Menu.Item
-                      onPress={() => handleUpdate(category.categoryName)}
-                      title="Update"
-                    />
-                    <Menu.Item
-                      onPress={() => handleDelete(category.categoryName)}
-                      title="Delete"
-                    />
-                    <Divider />
-                    <Menu.Item
-                      onPress={() =>
-                        navigateToQuizScreen(category.categoryName)
-                      }
-                      title="Take Quiz"
-                    />
-                  </Menu>
-                </View>
-
-                <ProgressBar
-                  progress={
-                    category.savedProgress || parseFloat(category.progress) || 0
+                <Menu
+                  visible={visibleMenus[index]}
+                  onDismiss={() => closeMenu(index)}
+                  anchor={
+                    <TouchableOpacity onPress={() => openMenu(index)}>
+                      <Ionicons name="ellipsis-vertical" size={20} color="#555" />
+                    </TouchableOpacity>
                   }
-                  color="#6200ee"
-                />
-                <Text>
-                  {category.savedProgress
-                    ? `${category.savedProgress.toFixed(2)}`
-                    : `${category.progress || 0}`}
-                </Text>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.emptyContainer}>
-              <LottieView
-                source={require("../../util/create.json")}
-                autoPlay
-                loop
-                style={styles.lottieAnimation}
+                >
+                  <Menu.Item onPress={() => handleUpdate(category.categoryName)} title="Update" />
+                  <Menu.Item onPress={() => handleDelete(category.categoryName)} title="Delete" />
+                  <Divider />
+                  <Menu.Item onPress={() => navigateToQuizScreen(category.categoryName)} title="Take Quiz" />
+                </Menu>
+              </View>
+
+              <ProgressBar
+                progress={
+                  category.savedProgress || parseFloat(category.progress) || 0
+                }
+                color="#6200ee"
               />
-              <Text style={styles.emptyText}>No flashcards yet</Text>
+              <Text style={styles.progressText}>
+                {category.savedProgress
+                  ? `${category.savedProgress.toFixed(2)}% completed`
+                  : `${category.progress || 0}% completed`}
+              </Text>
             </View>
-          )}
-        </ScrollView>
-      </View>
+          ))
+        ) : (
+          <View style={styles.emptyContainer}>
+            <LottieView
+              source={require("../../util/create.json")}
+              autoPlay
+              loop
+              style={styles.lottieAnimation}
+            />
+            <Text style={styles.emptyText}>No flashcards yet</Text>
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 };
@@ -234,128 +191,111 @@ const styles = StyleSheet.create({
   },
   topSection: {
     backgroundColor: "#480ca8",
-    height: 350,
-    width: "100%",
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    padding: 16,
-    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 30,
   },
   greeting: {
     fontSize: 24,
     fontWeight: "bold",
     color: "white",
   },
+  subGreeting: {
+    fontSize: 14,
+    color: "#d6c9f3",
+    marginTop: 4,
+  },
   initialsContainer: {
-    backgroundColor: "white",
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    backgroundColor: "#fff",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
     elevation: 4,
   },
   initials: {
-    fontSize: 40,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#480ca8",
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     borderWidth: 2,
-    borderColor: "#333",
-  },
-  categoryHeader: {
-    flexDirection: "column",
-    justifyContent: "center",
-    padding: 8,
-  },
-  categoryTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
-  },
-  textTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "black",
-  },
-  categorySubtitle: {
-    color: "#d4c0e4",
-    fontWeight: "600",
+    borderColor: "#fff",
   },
   buttonContainer: {
     flexDirection: "row",
-    marginTop: 20,
-    justifyContent: "center",
+    justifyContent: "space-around",
+    marginTop: 30,
   },
   card: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 16,
     alignItems: "center",
-    backgroundColor: "#f0f0f0",
-    borderRadius: 10,
-    padding: 24,
+    justifyContent: "center",
     width: "40%",
-    marginHorizontal: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
     elevation: 4,
   },
   cardText: {
-    fontSize: 16,
+    marginTop: 8,
+    fontWeight: "600",
     color: "#480ca8",
   },
   bottomSection: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   progressHeader: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   progressCard: {
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f9f9f9",
+    borderRadius: 12,
     padding: 16,
-    borderRadius: 10,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
+    marginBottom: 12,
+    elevation: 2,
   },
   categoryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 10,
+  },
+  textTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#222",
+  },
+  progressText: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
   },
   emptyContainer: {
+    marginTop: 40,
     alignItems: "center",
-    justifyContent: "center",
-    height: "100%",
   },
   lottieAnimation: {
     width: 200,
     height: 200,
   },
   emptyText: {
-    marginTop: 10,
-    fontSize: 18,
-    color: "gray",
+    marginTop: 16,
+    fontSize: 16,
+    color: "#999",
   },
 });
